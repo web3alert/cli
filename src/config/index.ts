@@ -4,6 +4,7 @@ import { readYamlFile } from '../yaml';
 export type Config = {
   url: string;
   token: string;
+  workspace: string;
 };
 
 export const DEFAULT_PATH: string = '~/.web3alert/config.yml';

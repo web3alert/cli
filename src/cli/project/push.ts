@@ -1,3 +1,4 @@
+import fs from 'fs/promises';
 import type yargs from 'yargs';
 import { Client } from '../../client';
 import { readConfig } from '../../config';
@@ -6,10 +7,15 @@ import {
   readYamlDir,
 } from '../../yaml';
 import type {
-  Me,
   Project,
   ProjectSource,
   ProjectSaveParams,
+  App,
+  AppSource,
+  AppSaveParams,
+  Blueprint,
+  BlueprintSource,
+  BlueprintSaveParams,
   Resource,
   ResourceSource,
   ResourceSaveParams,
@@ -32,12 +38,7 @@ const command: yargs.CommandModule = {
       token: config.token,
     });
     
-    const me = await client.request<void, Me>({
-      method: 'get',
-      path: '/v1/me',
-    });
-    const workspace = me.id;
-    
+    const workspace = config.workspace;
     const project = await readYamlFile<ProjectSource>('project.yml');
     const projectFullname = `${workspace}.${project.name}`;
     
@@ -49,78 +50,186 @@ const command: yargs.CommandModule = {
         fullname: `${projectFullname}`,
         workspace,
         public: project.public,
+        tags: project.tags,
+        labels: project.labels,
         meta: project.meta,
       },
     });
     
-    const prevResources = await client.request<void, Resource[]>({
-      method: 'get',
-      path: `/v2/resources?project=${projectFullname}`,
-    });
-    const nextResources = await readYamlDir<ResourceSource>('resources');
+    let hasApps = false;
     
-    for (const resource of nextResources) {
-      const { name, ...rest } = resource;
-      const project = `${projectFullname}`;
-      const fullname = `${project}.${name}`;
+    try {
+      const stat = await fs.stat('apps');
       
-      await client.request<ResourceSaveParams, Resource>({
-        method: 'put',
-        path: `/v2/resources/${fullname}`,
-        data: {
-          name,
-          fullname,
-          project,
-          workspace,
-          ...rest,
-        },
-      });
+      hasApps = stat.isDirectory();
+    } catch (err) {
+      // nooop
     }
     
-    const resourcesToDelete = prevResources.filter(prevResource => {
-      return !nextResources.find(nextResource => (nextResource.name == prevResource.name));
-    });
-    
-    for (const resource of resourcesToDelete) {
-      await client.request<void, void>({
-        method: 'delete',
-        path: `/v2/resources/${resource.fullname}`,
+    if (hasApps) {
+      const prevApps = await client.request<void, App[]>({
+        method: 'get',
+        path: `/v2/apps?project=${projectFullname}`,
       });
+      const nextApps = await readYamlDir<AppSource>('apps');
+      
+      for (const app of nextApps) {
+        const { name, blueprints, ...rest } = app;
+        const project = `${projectFullname}`;
+        const appFullname = `${project}.${name}`;
+        
+        await client.request<AppSaveParams, App>({
+          method: 'put',
+          path: `/v2/apps/${appFullname}`,
+          data: {
+            name,
+            fullname: appFullname,
+            project,
+            workspace,
+            ...rest,
+          },
+        });
+        
+        const prevBlueprints = await client.request<void, Blueprint[]>({
+          method: 'get',
+          path: `/v2/blueprints?app=${appFullname}`,
+        });
+        const nextBlueprints = blueprints;
+        
+        for (const blueprint of nextBlueprints) {
+          const { name, ...rest } = blueprint;
+          const blueprintFullname = `${appFullname}.${name}`;
+          
+          await client.request<BlueprintSaveParams, Blueprint>({
+            method: 'put',
+            path: `/v2/blueprints/${blueprintFullname}`,
+            data: {
+              name,
+              fullname: blueprintFullname,
+              app: appFullname,
+              project,
+              workspace,
+              ...rest,
+            },
+          });
+        }
+        
+        const blueprintsToDelete = prevBlueprints.filter(prevBlueprint => {
+          return !nextBlueprints.find(nextBlueprint => (nextBlueprint.name == prevBlueprint.name));
+        });
+        
+        for (const blueprint of blueprintsToDelete) {
+          await client.request<void, void>({
+            method: 'delete',
+            path: `/v2/blueprints/${blueprint.fullname}`,
+          });
+        }
+      }
+      
+      const appsToDelete = prevApps.filter(prevApp => {
+        return !nextApps.find(nextApp => (nextApp.name == prevApp.name));
+      });
+      
+      for (const app of appsToDelete) {
+        await client.request<void, void>({
+          method: 'delete',
+          path: `/v2/apps/${app.fullname}`,
+        });
+      }
     }
     
-    const prevTriggers = await client.request<void, Trigger[]>({
-      method: 'get',
-      path: `/v2/triggers?project=${projectFullname}`,
-    });
-    const nextTriggers = await readYamlDir<TriggerSource>('triggers');
+    let hasResources = false;
     
-    for (const trigger of nextTriggers) {
-      const { name, ...rest } = trigger;
-      const project = `${projectFullname}`;
-      const fullname = `${project}.${name}`;
-
-      await client.request<TriggerSaveParams, Trigger>({
-        method: 'put',
-        path: `/v2/triggers/${fullname}`,
-        data: {
-          name,
-          fullname,
-          project,
-          workspace,
-          ...rest,
-        },
-      });
+    try {
+      const stat = await fs.stat('resources');
+      
+      hasResources = stat.isDirectory();
+    } catch (err) {
+      // nooop
     }
-
-    const triggersToDelete = prevTriggers.filter(prevTrigger => {
-      return !nextTriggers.find(nextTrigger => (nextTrigger.name == prevTrigger.name));
-    });
-
-    for (const trigger of triggersToDelete) {
-      await client.request<void, void>({
-        method: 'delete',
-        path: `/v2/triggers/${trigger.fullname}`,
+    
+    if (hasResources) {
+      const prevResources = await client.request<void, Resource[]>({
+        method: 'get',
+        path: `/v2/resources?project=${projectFullname}`,
       });
+      const nextResources = await readYamlDir<ResourceSource>('resources');
+      
+      for (const resource of nextResources) {
+        const { name, ...rest } = resource;
+        const project = `${projectFullname}`;
+        const fullname = `${project}.${name}`;
+        
+        await client.request<ResourceSaveParams, Resource>({
+          method: 'put',
+          path: `/v2/resources/${fullname}`,
+          data: {
+            name,
+            fullname,
+            project,
+            workspace,
+            ...rest,
+          },
+        });
+      }
+      
+      const resourcesToDelete = prevResources.filter(prevResource => {
+        return !nextResources.find(nextResource => (nextResource.name == prevResource.name));
+      });
+      
+      for (const resource of resourcesToDelete) {
+        await client.request<void, void>({
+          method: 'delete',
+          path: `/v2/resources/${resource.fullname}`,
+        });
+      }
+    }
+    
+    let hasTriggers = false;
+    
+    try {
+      const stat = await fs.stat('triggers');
+      
+      hasTriggers = stat.isDirectory();
+    } catch (err) {
+      // nooop
+    }
+    
+    if (hasTriggers) {
+      const prevTriggers = await client.request<void, Trigger[]>({
+        method: 'get',
+        path: `/v2/triggers?project=${projectFullname}`,
+      });
+      const nextTriggers = await readYamlDir<TriggerSource>('triggers');
+      
+      for (const trigger of nextTriggers) {
+        const { name, ...rest } = trigger;
+        const project = `${projectFullname}`;
+        const fullname = `${project}.${name}`;
+
+        await client.request<TriggerSaveParams, Trigger>({
+          method: 'put',
+          path: `/v2/triggers/${fullname}`,
+          data: {
+            name,
+            fullname,
+            project,
+            workspace,
+            ...rest,
+          },
+        });
+      }
+
+      const triggersToDelete = prevTriggers.filter(prevTrigger => {
+        return !nextTriggers.find(nextTrigger => (nextTrigger.name == prevTrigger.name));
+      });
+
+      for (const trigger of triggersToDelete) {
+        await client.request<void, void>({
+          method: 'delete',
+          path: `/v2/triggers/${trigger.fullname}`,
+        });
+      }
     }
   },
 };

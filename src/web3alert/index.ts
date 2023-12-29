@@ -1,8 +1,6 @@
-export type Labels = Record<string, string>;
+export type Tags = string[];
 
-export type Me = {
-  id: string;
-};
+export type Labels = Record<string, string>;
 
 export type Project = {
   id: string;
@@ -10,6 +8,8 @@ export type Project = {
   fullname: string;
   workspace: string;
   public: boolean;
+  tags: Tags;
+  labels: Labels;
   meta: ProjectMeta;
 };
 
@@ -21,6 +21,8 @@ export type ProjectMeta = {
 export type ProjectSource = {
   name: string;
   public: boolean;
+  tags?: Tags;
+  labels?: Labels;
   meta: ProjectMeta;
 };
 
@@ -29,7 +31,70 @@ export type ProjectSaveParams = {
   fullname: string;
   workspace: string;
   public: boolean;
+  tags?: Tags;
+  labels?: Labels;
   meta: ProjectMeta;
+};
+
+export type App = {
+  id: string;
+  name: string;
+  fullname: string;
+  project: string;
+  workspace: string;
+  public: boolean;
+  url: string;
+  tags: Tags;
+  labels: Labels;
+};
+
+export type AppSource = {
+  name: string;
+  url: string;
+  blueprints: BlueprintSource[];
+  tags?: Tags;
+  labels?: Labels;
+};
+
+export type AppSaveParams = {
+  name: string;
+  fullname: string;
+  project: string;
+  workspace: string;
+  url: string;
+  tags?: Tags;
+  labels?: Labels;
+};
+
+export type Blueprint = {
+  id: string;
+  name: string;
+  fullname: string;
+  app: string;
+  project: string;
+  workspace: string;
+  public: boolean;
+  type: string;
+  tags: Tags;
+  labels: Labels;
+};
+
+export type BlueprintSource = {
+  name: string;
+  type: string;
+  tags?: Tags;
+  labels?: Labels;
+};
+
+export type BlueprintSaveParams = {
+  name: string;
+  fullname: string;
+  app: string;
+  project: string;
+  workspace: string;
+  type: string;
+  tags?: Tags;
+  labels?: Labels;
 };
 
 export type Resource = {
@@ -40,13 +105,17 @@ export type Resource = {
   workspace: string;
   public: boolean;
   blueprint: string;
-  data: object;
+  data?: object | null;
+  tags: Tags;
+  labels: Labels;
 };
 
 export type ResourceSource = {
   name: string;
   blueprint: string;
-  data: object;
+  data: object | null;
+  tags?: Tags;
+  labels?: Labels;
 };
 
 export type ResourceSaveParams = {
@@ -55,7 +124,9 @@ export type ResourceSaveParams = {
   project?: string;
   workspace: string;
   blueprint: string;
-  data: object;
+  data: object | null;
+  tags?: Tags;
+  labels?: Labels;
 };
 
 export type Trigger = {
@@ -67,6 +138,7 @@ export type Trigger = {
   public: boolean;
   values: Record<string, unknown>;
   pipeline: TriggerPipeline;
+  tags: Tags;
   labels: Labels;
   meta: TriggerMeta;
 };
@@ -91,7 +163,8 @@ export type TriggerSource = {
   name: string;
   values: Record<string, unknown>;
   pipeline: TriggerPipeline;
-  labels: Labels;
+  tags?: Tags;
+  labels?: Labels;
   meta: TriggerMeta;
 };
 
@@ -102,7 +175,8 @@ export type TriggerSaveParams = {
   workspace: string;
   values: Record<string, unknown>;
   pipeline: TriggerPipeline;
-  labels: Labels;
+  tags?: Tags;
+  labels?: Labels;
   meta: TriggerMeta;
 };
 
