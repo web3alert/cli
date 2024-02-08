@@ -16,6 +16,9 @@ export type Project = {
 export type ProjectMeta = {
   title: string;
   description: string;
+  icon?: string;
+  avatar?: string;
+  cover?: string;
 };
 
 export type ProjectSource = {
@@ -77,6 +80,12 @@ export type Blueprint = {
   type: string;
   tags: Tags;
   labels: Labels;
+  meta?: BlueprintMeta;
+};
+
+export type BlueprintMeta = {
+  title?: string;
+  description?: string;
 };
 
 export type BlueprintSource = {
@@ -84,6 +93,7 @@ export type BlueprintSource = {
   type: string;
   tags?: Tags;
   labels?: Labels;
+  meta?: BlueprintMeta;
 };
 
 export type BlueprintSaveParams = {
@@ -95,6 +105,7 @@ export type BlueprintSaveParams = {
   type: string;
   tags?: Tags;
   labels?: Labels;
+  meta?: BlueprintMeta;
 };
 
 export type Resource = {
@@ -108,6 +119,11 @@ export type Resource = {
   data?: object | null;
   tags: Tags;
   labels: Labels;
+  meta?: ResourceMeta;
+};
+
+export type ResourceMeta = {
+  title?: string;
 };
 
 export type ResourceSource = {
@@ -116,6 +132,7 @@ export type ResourceSource = {
   data: object | null;
   tags?: Tags;
   labels?: Labels;
+  meta?: ResourceMeta;
 };
 
 export type ResourceSaveParams = {
@@ -127,6 +144,7 @@ export type ResourceSaveParams = {
   data: object | null;
   tags?: Tags;
   labels?: Labels;
+  meta?: ResourceMeta;
 };
 
 export type Trigger = {
